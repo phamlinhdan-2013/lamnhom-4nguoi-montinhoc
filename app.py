@@ -1,226 +1,157 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# Cấu hình trang web Streamlit tối giản
-st.set_page_config(page_title="Kiến Tha Đồ Ăn", page_icon="🐜", layout="centered")
+# Cấu hình trang web Streamlit tối giản nhất có thể
+st.set_page_config(page_title="Dino Chrome Game Pro", page_icon="🦖", layout="centered")
 
-# Mã nguồn game HTML5 + Javascript thời gian thực hoàn chỉnh 100% không lỗi
-game_html = """
+# Đoạn mã game HTML5 + Canvas + Javascript chuyển động thời gian thực mượt mà
+dino_game_html = """
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <style>
-        body { margin: 0; display: flex; justify-content: center; background-color: #f7f7f7; font-family: Arial, sans-serif; overflow: hidden; user-select: none; }
-        canvas { background-color: #e5c158; border: 4px solid #8B4513; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        body { margin: 0; display: flex; justify-content: center; align-items: center; background-color: #f7f7f7; font-family: Arial, sans-serif; overflow: hidden; user-select: none; }
+        canvas { background-color: #fff; border: 2px solid #535353; border-radius: 8px; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <canvas id="gameCanvas" width="600" height="200"></canvas>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        let level = 1;
-        let coins = 0;
-        let gameStatus = "START"; 
-        let message = "Đi tìm thức ăn nào!";
+        let gameSpeed = 5;
+        let score = 0;
+        let highScore = 0;
+        let isGameOver = false;
 
-        let currentSkin = "🐜";
-        let hasSuperPower = false;
-        
-        const skins = [
-            { icon: "🐜", name: "Kiến Đen", price: 0, owned: true, speed: 4, power: false },
-            { icon: "🌈", name: "Kiến Bảy Màu", price: 3, owned: false, speed: 4, power: false },
-            { icon: "🌸", name: "Kiến Hồng", price: 3, owned: false, speed: 4, power: false },
-            { icon: "👑", name: "Kiến To Cầu Vồng", price: 10, owned: false, speed: 5.5, power: true }
-        ];
+        const dino = {
+            x: 50,
+            y: 160,
+            width: 25,
+            height: 30,
+            gravity: 0.6,
+            jumpForce: -10,
+            velocity: 0,
+            isJumping: false
+        };
 
-        const ant = { x: 50, y: 350, size: 24 };
-        const nest = { x: 50, y: 350, size: 30 };
-        const food = { x: 450, y: 250, size: 25, type: "🍰", isCarried: false }; 
-        const monster = { x: 540, y: 50, size: 30, speed: 2, isActive: false, isDead: false };
-        const trap = { x: 300, y: 200, size: 20, speedY: 3, dir: 1 };
+        let obstacles = [];
+        let spawnTimer = 0;
 
-        const keys = {};
-        window.addEventListener("keydown", e => { 
-            keys[e.key] = true; 
-            if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
-            
-            if(gameStatus === "START") { resetLevel("RESTART"); }
-            else if(gameStatus === "GAMEOVER" || gameStatus === "VICTORY") { resetLevel("RESTART"); }
-            else if(gameStatus === "WIN") { resetLevel("NEXT"); }
-        });
-        window.addEventListener("keyup", e => keys[e.key] = false);
+        function jump() {
+            if (isGameOver) {
+                resetGame();
+                return;
+            }
+            if (!dino.isJumping) {
+                dino.velocity = dino.jumpForce;
+                dino.isJumping = true;
+            }
+        }
 
-        canvas.addEventListener("click", e => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            if (gameStatus === "START") {
-                resetLevel("RESTART");
-            } else if (gameStatus === "GAMEOVER" || gameStatus === "WIN" || gameStatus === "VICTORY") {
-                if (mouseX >= 220 && mouseX <= 380 && mouseY >= 210 && mouseY <= 250) {
-                    gameStatus = "SHOP";
-                } else if (mouseX >= 220 && mouseX <= 380 && mouseY >= 260 && mouseY <= 300) {
-                    if (gameStatus === "WIN") resetLevel("NEXT");
-                    else resetLevel("RESTART");
-                }
-            } else if (gameStatus === "SHOP") {
-                if (mouseX >= 20 && mouseX <= 100 && mouseY >= 350 && mouseY <= 380) {
-                    gameStatus = "GAMEOVER";
-                    return;
-                }
-                for (let i = 0; i < skins.length; i++) {
-                    let btnX = 50 + i * 130;
-                    let btnY = 280;
-                    if (mouseX >= btnX && mouseX <= btnX + 100 && mouseY >= btnY && mouseY <= btnY + 30) {
-                        let s = skins[i];
-                        if (s.owned) {
-                            if (s.power) alert("Con kiến này có thể đè bẹp con quỷ");
-                            currentSkin = s.icon;
-                            hasSuperPower = s.power;
-                        } else {
-                            if (coins >= s.price) {
-                                coins -= s.price;
-                                s.owned = true;
-                                if (s.power) alert("Con kiến này có thể đè bẹp con quỷ");
-                                currentSkin = s.icon;
-                                hasSuperPower = s.power;
-                            } else {
-                                alert("Bạn không đủ số xu tích lũy để mua nhân vật này!");
-                            }
-                        }
-                    }
-                }
+        window.addEventListener("keydown", function(e) {
+            if (e.code === "Space") {
+                e.preventDefault();
+                jump();
             }
         });
 
-        function resetLevel(type) {
-            if(type === "RESTART") { level = 1; coins = 0; }
-            else if(type === "NEXT") { level++; }
+        canvas.addEventListener("click", jump);
 
-            if(level > 3) { gameStatus = "VICTORY"; return; }
-
-            gameStatus = "PLAYING";
-            ant.x = 50; ant.y = 350;
-            food.isCarried = false;
-            monster.x = 540; monster.y = 50;
-            monster.isDead = false;
-            
-            if(level === 1) { 
-                food.type = "🍰"; 
-                food.x = 450; food.y = 250; 
-                monster.isActive = false;
-                monster.speed = 2.0; 
-                message = "Màn 1: Quái vật đang ngủ. Hãy lén lấy Bánh ngọt!"; 
-            }
-            if(level === 2) { 
-                food.type = "🍗"; 
-                food.x = 520; food.y = 80;
-                monster.isActive = false;
-                monster.speed = 2.4; 
-                message = "Màn 2: Cẩn thiện bẫy gai di chuyển mang Đùi gà về!"; 
-            }
-            if(level === 3) { 
-                food.type = "🍭"; 
-                food.x = 520; food.y = 80;
-                monster.isActive = true; 
-                monster.speed = 3.0; 
-                message = "Màn 3: Quái vật tỉnh sẵn canh giữ Kẹo mút!"; 
-            }
+        function spawnObstacle() {
+            let height = Math.random() > 0.5 ? 40 : 30;
+            let width = 15;
+            obstacles.push({
+                x: canvas.width,
+                y: 190 - height,
+                width: width,
+                height: height
+            });
         }
 
-        function checkCollision(rect1, rect2) {
-            return rect1.x < rect2.x + rect2.size && rect1.x + rect1.size > rect2.x &&
-                   rect1.y < rect2.y + rect2.size && rect1.y + rect1.size > rect2.y;
+        function resetGame() {
+            obstacles = [];
+            score = 0;
+            gameSpeed = 5;
+            isGameOver = false;
+            dino.y = 160;
+            dino.velocity = 0;
+            dino.isJumping = false;
+            animate();
         }
 
-        function update() {
-            if(gameStatus !== "PLAYING") return;
-            let currentSpeed = hasSuperPower ? 5.5 : 4;
+        let animationFrameId;
+        function animate() {
+            if (isGameOver) return;
 
-            if (keys["ArrowUp"] || keys["w"] || keys["W"]) ant.y = Math.max(40, ant.y - currentSpeed);
-            if (keys["ArrowDown"] || keys["s"] || keys["S"]) ant.y = Math.min(canvas.height - ant.size, ant.y + currentSpeed);
-            if (keys["ArrowLeft"] || keys["a"] || keys["A"]) ant.x = Math.max(0, ant.x - currentSpeed);
-            if (keys["ArrowRight"] || keys["d"] || keys["D"]) ant.x = Math.min(canvas.width - ant.size, ant.x + currentSpeed);
-
-            if(!food.isCarried && checkCollision(ant, food)) {
-                food.isCarried = true;
-                if (!monster.isDead) monster.isActive = true;
-                message = "😱 Quái vật đuổi theo kìa! Chạy về TỔ mau!";
-            }
-
-            if(food.isCarried) {
-                food.x = ant.x;
-                food.y = ant.y - 12;
-            }
-
-            if(monster.isActive && !monster.isDead) {
-                let dx = ant.x - monster.x; let dy = ant.y - monster.y;
-                let dist = Math.sqrt(dx*dx + dy*dy);
-                if(dist > 0) {
-                    monster.x += (dx / dist) * monster.speed;
-                    monster.y += (dy / dist) * monster.speed;
-                }
-            }
-
-            if(level === 2) {
-                trap.y += trap.speedY * trap.dir;
-                if(trap.y < 60 || trap.y > 350) trap.dir *= -1;
-                if(checkCollision(ant, trap)) { gameStatus = "GAMEOVER"; message = "💥 Bạn đã đạp trúng bẫy gai rồi!"; }
-            }
-
-            if(!monster.isDead && checkCollision(ant, monster)) {
-                if (hasSuperPower) {
-                    monster.isDead = true;
-                    monster.isActive = false;
-                    message = "💥 Kiến To Cầu Vồng ĐÈ BẸP quái vật thành công!";
-                } else {
-                    gameStatus = "GAMEOVER";
-                    message = "💀 Bạn đã bị Quái vật bắt mất tiêu!";
-                }
-            }
-
-            if(food.isCarried && checkCollision(ant, nest)) {
-                let reward = level === 1 ? 10 : (level === 2 ? 20 : 40);
-                coins += reward;
-                gameStatus = "WIN";
-                message = `🎉 Thành công! Nhận được ${reward} xu.`;
-            }
-        }
-
-        function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (gameStatus === "SHOP") {
-                ctx.fillStyle = "#333";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "#ffcc00";
-                ctx.font = "bold 26px Arial";
-                ctx.fillText("🏪 CỬA HÀNG KIẾN", 200, 60);
-                ctx.fillStyle = "#fff";
-                ctx.font = "16px Arial";
-                ctx.fillText("Số xu tích lũy của bạn: " + coins + " 💰", 200, 100);
-                ctx.fillText("Chọn nhân vật để thi đấu:", 60, 150);
+            dino.velocity += dino.gravity;
+            dino.y += dino.velocity;
 
-                for(let i=0; i<skins.length; i++) {
-                    let s = skins[i];
-                    let x = 50 + i * 130;
-                    ctx.fillStyle = currentSkin === s.icon ? "#4dff4d" : "#444";
-                    ctx.fillRect(x, 170, 100, 100);
-                    ctx.strokeStyle = "#fff";
-                    ctx.strokeRect(x, 170, 100, 100);
-                    ctx.fillStyle = "#fff";
-                    ctx.font = "35px Arial";
-                    ctx.fillText(s.icon, x + 32, 225);
-                    ctx.fillStyle = s.owned ? "#0099ff" : "#ff3333";
-                    ctx.fillRect(x, 280, 100, 30);
-                    ctx.fillStyle = "#fff";
-                    ctx.font = "bold 12px Arial";
-                    let text = s.owned ? (currentSkin === s.icon ? "ĐANG CHỌN" : "CHỌN") : s.price + " XU";
-                    ctx.fillText(text, x + (s.owned ? 15 : 30), 300);
-                    ctx.fillStyle = "#ccc";
-                    ctx.font = "11px Arial";
+            if (dino.y >= 160) {
+                dino.y = 160;
+                dino.velocity = 0;
+                dino.isJumping = false;
+            }
+
+            ctx.font = "26px Arial";
+            ctx.fillText("🦖", dino.x, dino.y + 24);
+
+            spawnTimer++;
+            if (spawnTimer > Math.max(50, 100 - gameSpeed * 3)) {
+                spawnObstacle();
+                spawnTimer = 0;
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let o = obstacles[i];
+                o.x -= gameSpeed;
+
+                ctx.font = "24px Arial";
+                ctx.fillText("🌵", o.x, o.y + 24);
+
+                if (
+                    dino.x < o.x + o.width &&
+                    dino.x + dino.width > o.x &&
+                    dino.y < o.y + o.height &&
+                    dino.y + dino.height > o.y
+                ) {
+                    isGameOver = true;
+                }
+
+                if (o.x + o.width < 0) {
+                    obstacles.splice(i, 1);
+                    score++;
+                    if (score > highScore) highScore = score;
+                    if (score % 5 === 0) gameSpeed += 0.5; 
+                }
+            }
+
+            ctx.fillStyle = "#535353";
+            ctx.font = "16px monospace";
+            ctx.fillText("HI " + String(highScore).padStart(5, '0') + "   " + String(score).padStart(5, '0'), 460, 30);
+
+            if (isGameOver) {
+                ctx.fillStyle = "#535353";
+                ctx.font = "bold 20px monospace";
+                ctx.fillText("G A M E   O V E R", 220, 90);
+                ctx.font = "14px Arial";
+                ctx.fillText("💀 Bấm chuột hoặc nút Cách để chơi lại", 185, 120);
+                cancelAnimationFrame(animationFrameId);
+                return;
+            }
+
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
+"""
+
+components.html(dino_game_html, height=220, scrolling=False)
