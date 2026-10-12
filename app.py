@@ -2,9 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # Cấu hình trang web Streamlit tối giản nhất có thể
-st.set_page_config(page_title="Dino Chrome Game RGB Pro", page_icon="🦖", layout="centered")
+st.set_page_config(page_title="Dino Chrome Game RGB Stable", page_icon="🦖", layout="centered")
 
-# Đoạn mã game HTML5 Canvas to + Khủng long đổi màu liên tục chớp nháy + Âm thanh khi nhảy
+# Đoạn mã game HTML5 Canvas to + Thân Khủng long tự đổi màu liên tục sắc nét ổn định
 dino_game_html = """
 <!DOCTYPE html>
 <html>
@@ -26,22 +26,20 @@ dino_game_html = """
         let score = 0;
         let highScore = 0;
         let isGameOver = false;
-        
-        // Biến tăng dần để tính toán màu sắc cầu vồng theo thời gian thực
         let hueColor = 0;
 
         const dino = {
             x: 80,
             y: 330,
-            width: 40,
-            height: 50,
+            width: 30,
+            height: 45,
             gravity: 0.6,
             jumpForce: -13,
             velocity: 0,
             isJumping: false
         };
 
-        let obstacles =;
+        let obstacles = [];
         let spawnTimer = 0;
 
         function playJumpSound() {
@@ -100,7 +98,7 @@ dino_game_html = """
         }
 
         function resetGame() {
-            obstacles =;
+            obstacles = [];
             score = 0;
             gameSpeed = 6;
             isGameOver = false;
@@ -129,24 +127,24 @@ dino_game_html = """
             dino.velocity += dino.gravity;
             dino.y += dino.velocity;
 
-            if (dino.y >= 330) {
-                dino.y = 330;
+            if (dino.y >= 335) {
+                dino.y = 335;
                 dino.velocity = 0;
                 dino.isJumping = false;
             }
 
-            // TỰ ĐỘNG ĐỔI MÀU LIÊN TỤC: Tăng góc màu sắc cầu vồng sau mỗi khung hình (60 FPS)
+            // TỰ ĐỘNG ĐỔI MÀU THÂN: Tăng góc màu sắc cầu vồng sau mỗi khung hình
             hueColor = (hueColor + 2) % 360; 
-            let dynamicColor = `hsl(${hueColor}, 90%, 50%)`;
+            let dynamicColor = `hsl(${hueColor}, 95%, 45%)`;
 
-            // Vẽ Khủng long chớp nháy màu liên tục cực đỉnh
-            ctx.save();
-            ctx.font = "42px Arial";
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = dynamicColor;
+            // Vẽ khủng long hình hộp Vector tự đổi màu sắc nét
             ctx.fillStyle = dynamicColor;
-            ctx.fillText("🦖", dino.x, dino.y + 38);
-            ctx.restore();
+            ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+            // Vẽ thêm cái mỏ nhỏ phía trước cho giống khủng long
+            ctx.fillRect(dino.x + dino.width, dino.y, 10, 15);
+            // Vẽ mắt nhỏ màu trắng
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(dino.x + dino.width - 5, dino.y + 3, 4, 4);
 
             // Quản lý vật cản Xương rồng lao tới
             spawnTimer++;
@@ -159,9 +157,9 @@ dino_game_html = """
                 let o = obstacles[i];
                 o.x -= gameSpeed;
 
-                // Vẽ Xương rồng
+                // Vẽ Xương rồng màu xám tối chuẩn cổ điển
                 ctx.font = "38px Arial";
-                ctx.fillStyle = "#535353"; // Xương rồng giữ màu tối chuẩn cổ điển
+                ctx.fillStyle = "#535353"; 
                 ctx.fillText("🌵", o.x, o.y + 35);
 
                 // Kiểm tra va chạm (Đâm vào xương rồng)
@@ -174,7 +172,6 @@ dino_game_html = """
                     isGameOver = true;
                 }
 
-                // Khi vượt qua xương rồng thành công: Cộng điểm
                 if (o.x + o.width < 0) {
                     obstacles.splice(i, 1);
                     score++;
@@ -184,7 +181,7 @@ dino_game_html = """
                 }
             }
 
-            // Hiển thị bảng điểm chữ lớn rõ ràng
+            // Hiển thị bảng điểm
             ctx.fillStyle = "#535353";
             ctx.font = "bold 20px monospace";
             ctx.fillText("HI " + String(highScore).padStart(5, '0') + "   " + String(score).padStart(5, '0'), 600, 45);
@@ -203,12 +200,10 @@ dino_game_html = """
             animationFrameId = requestAnimationFrame(animate);
         }
 
-        // Bắt đầu chạy game
         animate();
     </script>
 </body>
 </html>
 """
 
-# Tăng kích thước nhúng chiều rộng và chiều cao lên để chứa vừa khít Canvas 800x400
 components.html(dino_game_html, width=820, height=430, scrolling=False)
