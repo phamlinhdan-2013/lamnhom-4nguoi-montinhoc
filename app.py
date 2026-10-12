@@ -1,10 +1,10 @@
-import streamlit st
+import streamlit as st
 import streamlit.components.v1 as components
 
-# Cấu hình trang web Streamlit gọn gàng nhất
+# Cấu hình trang web Streamlit tối giản
 st.set_page_config(page_title="Kiến Tha Đồ Ăn", page_icon="🐜", layout="centered")
 
-# Mã nguồn game HTML5 + Javascript thời gian thực hoàn chỉnh không lỗi
+# Mã nguồn game HTML5 + Javascript thời gian thực hoàn chỉnh 100% không lỗi
 game_html = """
 <!DOCTYPE html>
 <html>
@@ -22,13 +22,11 @@ game_html = """
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // Trạng thái hệ thống
         let level = 1;
         let coins = 0;
         let gameStatus = "START"; 
         let message = "Đi tìm thức ăn nào!";
 
-        // Hệ thống Cửa hàng & Nhân vật
         let currentSkin = "🐜";
         let hasSuperPower = false;
         
@@ -39,14 +37,12 @@ game_html = """
             { icon: "👑", name: "Kiến To Cầu Vồng", price: 10, owned: false, speed: 5.5, power: true }
         ];
 
-        // Khởi tạo các đối tượng game
         const ant = { x: 50, y: 350, size: 24 };
         const nest = { x: 50, y: 350, size: 30 };
         const food = { x: 450, y: 250, size: 25, type: "🍰", isCarried: false }; 
         const monster = { x: 540, y: 50, size: 30, speed: 2, isActive: false, isDead: false };
         const trap = { x: 300, y: 200, size: 20, speedY: 3, dir: 1 };
 
-        // Xử lý nút bấm bàn phím di chuyển
         const keys = {};
         window.addEventListener("keydown", e => { 
             keys[e.key] = true; 
@@ -58,7 +54,6 @@ game_html = """
         });
         window.addEventListener("keyup", e => keys[e.key] = false);
 
-        // Chuột click chọn Menu / Shop
         canvas.addEventListener("click", e => {
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
@@ -67,23 +62,17 @@ game_html = """
             if (gameStatus === "START") {
                 resetLevel("RESTART");
             } else if (gameStatus === "GAMEOVER" || gameStatus === "WIN" || gameStatus === "VICTORY") {
-                // Click nút vào Cửa Hàng
                 if (mouseX >= 220 && mouseX <= 380 && mouseY >= 210 && mouseY <= 250) {
                     gameStatus = "SHOP";
-                } 
-                // Click nút Chơi Tiếp / Chơi Lại
-                else if (mouseX >= 220 && mouseX <= 380 && mouseY >= 260 && mouseY <= 300) {
+                } else if (mouseX >= 220 && mouseX <= 380 && mouseY >= 260 && mouseY <= 300) {
                     if (gameStatus === "WIN") resetLevel("NEXT");
                     else resetLevel("RESTART");
                 }
             } else if (gameStatus === "SHOP") {
-                // Click nút Quay Lại
                 if (mouseX >= 20 && mouseX <= 100 && mouseY >= 350 && mouseY <= 380) {
                     gameStatus = "GAMEOVER";
                     return;
                 }
-                
-                // Mua và chọn skin kiến
                 for (let i = 0; i < skins.length; i++) {
                     let btnX = 50 + i * 130;
                     let btnY = 280;
@@ -133,7 +122,7 @@ game_html = """
                 food.x = 520; food.y = 80;
                 monster.isActive = false;
                 monster.speed = 2.4; 
-                message = "Màn 2: Cẩn thận bẫy gai di chuyển mang Đùi gà về!"; 
+                message = "Màn 2: Cẩn thiện bẫy gai di chuyển mang Đùi gà về!"; 
             }
             if(level === 3) { 
                 food.type = "🍭"; 
@@ -151,16 +140,13 @@ game_html = """
 
         function update() {
             if(gameStatus !== "PLAYING") return;
-
             let currentSpeed = hasSuperPower ? 5.5 : 4;
 
-            // Di chuyển
             if (keys["ArrowUp"] || keys["w"] || keys["W"]) ant.y = Math.max(40, ant.y - currentSpeed);
             if (keys["ArrowDown"] || keys["s"] || keys["S"]) ant.y = Math.min(canvas.height - ant.size, ant.y + currentSpeed);
             if (keys["ArrowLeft"] || keys["a"] || keys["A"]) ant.x = Math.max(0, ant.x - currentSpeed);
             if (keys["ArrowRight"] || keys["d"] || keys["D"]) ant.x = Math.min(canvas.width - ant.size, ant.x + currentSpeed);
 
-            // Nhặt thức ăn
             if(!food.isCarried && checkCollision(ant, food)) {
                 food.isCarried = true;
                 if (!monster.isDead) monster.isActive = true;
@@ -172,7 +158,6 @@ game_html = """
                 food.y = ant.y - 12;
             }
 
-            // Quái vật đuổi theo kiến
             if(monster.isActive && !monster.isDead) {
                 let dx = ant.x - monster.x; let dy = ant.y - monster.y;
                 let dist = Math.sqrt(dx*dx + dy*dy);
@@ -182,14 +167,12 @@ game_html = """
                 }
             }
 
-            // Hoạt động bẫy gai (Màn 2)
             if(level === 2) {
                 trap.y += trap.speedY * trap.dir;
                 if(trap.y < 60 || trap.y > 350) trap.dir *= -1;
                 if(checkCollision(ant, trap)) { gameStatus = "GAMEOVER"; message = "💥 Bạn đã đạp trúng bẫy gai rồi!"; }
             }
 
-            // Kiểm tra va chạm quái vật
             if(!monster.isDead && checkCollision(ant, monster)) {
                 if (hasSuperPower) {
                     monster.isDead = true;
@@ -201,7 +184,6 @@ game_html = """
                 }
             }
 
-            // Kiểm tra về Tổ thành công
             if(food.isCarried && checkCollision(ant, nest)) {
                 let reward = level === 1 ? 10 : (level === 2 ? 20 : 40);
                 coins += reward;
@@ -213,15 +195,12 @@ game_html = """
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // CHẾ ĐỘ CỬA HÀNG (SHOP)
             if (gameStatus === "SHOP") {
                 ctx.fillStyle = "#333";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
                 ctx.fillStyle = "#ffcc00";
                 ctx.font = "bold 26px Arial";
                 ctx.fillText("🏪 CỬA HÀNG KIẾN", 200, 60);
-                
                 ctx.fillStyle = "#fff";
                 ctx.font = "16px Arial";
                 ctx.fillText("Số xu tích lũy của bạn: " + coins + " 💰", 200, 100);
@@ -230,7 +209,18 @@ game_html = """
                 for(let i=0; i<skins.length; i++) {
                     let s = skins[i];
                     let x = 50 + i * 130;
-
                     ctx.fillStyle = currentSkin === s.icon ? "#4dff4d" : "#444";
                     ctx.fillRect(x, 170, 100, 100);
                     ctx.strokeStyle = "#fff";
+                    ctx.strokeRect(x, 170, 100, 100);
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "35px Arial";
+                    ctx.fillText(s.icon, x + 32, 225);
+                    ctx.fillStyle = s.owned ? "#0099ff" : "#ff3333";
+                    ctx.fillRect(x, 280, 100, 30);
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "bold 12px Arial";
+                    let text = s.owned ? (currentSkin === s.icon ? "ĐANG CHỌN" : "CHỌN") : s.price + " XU";
+                    ctx.fillText(text, x + (s.owned ? 15 : 30), 300);
+                    ctx.fillStyle = "#ccc";
+                    ctx.font = "11px Arial";
