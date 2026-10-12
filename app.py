@@ -2,9 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # Cấu hình trang web Streamlit tối giản nhất có thể
-st.set_page_config(page_title="Dino Chrome Game Pro Max", page_icon="🦖", layout="centered")
+st.set_page_config(page_title="Dino Chrome Game RGB Real", page_icon="🦖", layout="centered")
 
-# Đoạn mã game HTML5 Canvas to hơn + Hiệu ứng Đổi màu + Âm thanh khi nhảy
+# Đoạn mã game HTML5 Canvas to + Thân Khủng long tự đổi màu liên tục sắc nét + Âm thanh khi nhảy
 dino_game_html = """
 <!DOCTYPE html>
 <html>
@@ -16,7 +16,6 @@ dino_game_html = """
     </style>
 </head>
 <body>
-    <!-- Phóng to kích thước Canvas lên 800x400 -->
     <canvas id="gameCanvas" width="800" height="400"></canvas>
 
     <script>
@@ -28,26 +27,24 @@ dino_game_html = """
         let highScore = 0;
         let isGameOver = false;
         
-        // Mảng chứa các màu sắc ngẫu nhiên cho Khủng long
-        const colors = ["#535353", "#ff3333", "#33cc33", "#3333ff", "#ff9900", "#cc33ff", "#00ffff", "#ff3399"];
-        let currentDinoColor = colors[0];
+        // Biến tăng dần để tính toán màu sắc cầu vồng của thân khủng long
+        let hueColor = 0;
 
-        // Khởi tạo Khủng long (Điều chỉnh lại tọa độ theo khung màn hình 400px)
+        // Khởi tạo Khủng long (Chỉnh lại kích thước chuẩn để vẽ đồ họa hình dáng)
         const dino = {
             x: 80,
             y: 330,
-            width: 40,
-            height: 50,
+            width: 44,
+            height: 47,
             gravity: 0.6,
             jumpForce: -13,
             velocity: 0,
             isJumping: false
         };
 
-        let obstacles = [];
+        let obstacles =;
         let spawnTimer = 0;
 
-        // Hàm tự tạo âm thanh kỹ thuật số phát qua loa máy tính khi nhảy
         function playJumpSound() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -58,8 +55,8 @@ dino_game_html = """
                 gainNode.connect(audioCtx.destination);
                 
                 oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(150, audioCtx.currentTime); // Tần số âm thanh lúc bắt đầu nhảy
-                oscillator.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.12); // Âm thanh vút lên cao
+                oscillator.frequency.setValueAtTime(150, audioCtx.currentTime); 
+                oscillator.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.12); 
                 
                 gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
@@ -79,7 +76,7 @@ dino_game_html = """
             if (!dino.isJumping) {
                 dino.velocity = dino.jumpForce;
                 dino.isJumping = true;
-                playJumpSound(); // Phát âm thanh "Típ" khi nhảy
+                playJumpSound(); 
             }
         }
 
@@ -103,12 +100,39 @@ dino_game_html = """
             });
         }
 
+        // Hàm tự vẽ chú khủng long Dino bằng các khối hình học (được đổi màu chính xác thân thể)
+        function drawDino(x, y, color) {
+            ctx.fillStyle = color;
+            
+            // Đầu và mỏ khủng long
+            ctx.fillRect(x + 20, y, 24, 12);
+            ctx.fillRect(x + 16, y + 4, 4, 8);
+            ctx.fillRect(x + 20, y + 12, 16, 4);
+            
+            // Mắt (Màu trắng sắc nét)
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(x + 24, y + 3, 3, 3);
+            ctx.fillStyle = color;
+
+            // Cổ và thân hình
+            ctx.fillRect(x + 16, y + 16, 12, 4);
+            ctx.fillRect(x + 8, y + 20, 20, 16);
+            ctx.fillRect(x, y + 24, 8, 8); // Đuôi cất cao
+            ctx.fillRect(x, y + 20, 4, 4);
+
+            // Chân trái và chân phải
+            ctx.fillRect(x + 12, y + 36, 4, 8);
+            ctx.fillRect(x + 20, y + 36, 4, 8);
+            ctx.fillRect(x + 10, y + 44, 6, 3);
+            ctx.fillRect(x + 18, y + 44, 6, 3);
+        }
+
         function resetGame() {
-            obstacles = [];
+            obstacles =;
             score = 0;
             gameSpeed = 6;
             isGameOver = false;
-            currentDinoColor = colors[0];
+            hueColor = 0;
             dino.y = 330;
             dino.velocity = 0;
             dino.isJumping = false;
@@ -121,7 +145,7 @@ dino_game_html = """
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Vẽ mặt đất gạch chân cố định dưới chân khủng long
+            // Vẽ mặt đất cố định dưới chân
             ctx.strokeStyle = "#535353";
             ctx.lineWidth = 3;
             ctx.beginPath();
@@ -133,21 +157,18 @@ dino_game_html = """
             dino.velocity += dino.gravity;
             dino.y += dino.velocity;
 
-            if (dino.y >= 330) {
-                dino.y = 330;
+            if (dino.y >= 333) {
+                dino.y = 333;
                 dino.velocity = 0;
                 dino.isJumping = false;
             }
 
-            // Vẽ Khủng long (Dạng Emoji to hơn kèm theo màu nền đổi màu sinh động)
-            ctx.save();
-            ctx.font = "42px Arial";
-            // Tạo hiệu ứng đổ bóng màu để con khủng long đổi màu liên tục xung quanh
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = currentDinoColor;
-            ctx.fillStyle = currentDinoColor;
-            ctx.fillText("🦖", dino.x, dino.y + 38);
-            ctx.restore();
+            // TỰ ĐỘNG ĐỔI MÀU THÂN: Tăng góc màu sắc cầu vồng sau mỗi khung hình
+            hueColor = (hueColor + 2) % 360; 
+            let dynamicColor = `hsl(${hueColor}, 95%, 45%)`;
+
+            // Gọi hàm vẽ khủng long tự đổi màu sắc nét (Không bị bóng mờ xung quanh)
+            drawDino(dino.x, dino.y, dynamicColor);
 
             // Quản lý vật cản Xương rồng lao tới
             spawnTimer++;
@@ -160,8 +181,9 @@ dino_game_html = """
                 let o = obstacles[i];
                 o.x -= gameSpeed;
 
-                // Vẽ Xương rồng to rõ ràng hơn
+                // Vẽ Xương rồng màu xám tối chuẩn cổ điển
                 ctx.font = "38px Arial";
+                ctx.fillStyle = "#535353"; 
                 ctx.fillText("🌵", o.x, o.y + 35);
 
                 // Kiểm tra va chạm (Đâm vào xương rồng)
@@ -174,21 +196,16 @@ dino_game_html = """
                     isGameOver = true;
                 }
 
-                // Khi vượt qua xương rồng thành công: Cộng điểm + Đổi màu khủng long
                 if (o.x + o.width < 0) {
                     obstacles.splice(i, 1);
                     score++;
                     
-                    // Thực hiện đổi màu ngẫu nhiên từ mảng màu có sẵn
-                    let randomColorIndex = Math.floor(Math.random() * colors.length);
-                    currentDinoColor = colors[randomColorIndex];
-                    
                     if (score > highScore) highScore = score;
-                    if (score % 4 === 0) gameSpeed += 0.5; // Tăng dần tốc độ
+                    if (score % 4 === 0) gameSpeed += 0.5; 
                 }
             }
 
-            // Hiển thị bảng điểm chữ lớn rõ ràng
+            // Hiển thị bảng điểm
             ctx.fillStyle = "#535353";
             ctx.font = "bold 20px monospace";
             ctx.fillText("HI " + String(highScore).padStart(5, '0') + "   " + String(score).padStart(5, '0'), 600, 45);
@@ -207,12 +224,10 @@ dino_game_html = """
             animationFrameId = requestAnimationFrame(animate);
         }
 
-        // Bắt đầu chạy game
         animate();
     </script>
 </body>
 </html>
 """
 
-# Tăng kích thước nhúng chiều rộng và chiều cao lên để chứa vừa khít Canvas 800x400
 components.html(dino_game_html, width=820, height=430, scrolling=False)
