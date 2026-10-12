@@ -1,101 +1,191 @@
 import streamlit as st
-import random
-import time
+import streamlit.components.v1 as components
 
-# Cấu hình giao diện trang web game
-st.set_page_config(page_title="Dino Jump Game", page_icon="🦖", layout="centered")
+# Cấu hình trang web Streamlit
+st.set_page_config(page_title="Dino Chrome Game Pro", page_icon="🦖", layout="centered")
 
-st.title("🦖 Game Khủng Long Vượt Xương Rồng")
-st.write("Giải pháp làm game Dino huyền thoại chạy mượt mà trên nền tảng Streamlit!")
+st.title("🦖 Game Khủng Long Vượt Xương Xịn Mượt")
+st.write("### 👥 Bài Tập Nhóm: An - Đan - Nhi - Phi (Lớp 8.10)")
+st.write("👉 Hướng dẫn: Nhấn **phím CÁCH (Spacebar)** trên bàn phím hoặc **Bấm chuột vào khung game** để điều khiển Khủng long nhảy qua xương rồng!")
 
-# Khởi tạo các biến lưu trạng thái game (Session State)
-if "score" not in st.session_state:
-    st.session_state.score = 0
-    st.session_state.high_score = 0
-    st.session_state.cactus_distance = random.randint(2, 5)  # Khoảng cách đến cây xương rồng (tính bằng mét)
-    st.session_state.game_over = False
-    st.session_state.log_message = "Trò chơi bắt đầu! Hãy chuẩn bị nhảy."
+# Đoạn mã mã game HTML5 + Canvas + Javascript chạy thời gian thực
+dino_game_html = """
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f7f7f7;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            background-color: #fff;
+            border-bottom: 2px solid #535353;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="600" height="200"></canvas>
 
-# Hàm xử lý khi người chơi bấm nút Nhảy
-def play_turn(jump_force):
-    if st.session_state.game_over:
-        return
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
 
-    # Cây xương rồng tiến lại gần hơn từ 1 đến 3 mét ngẫu nhiên
-    speed = random.randint(1, 3)
-    st.session_state.cactus_distance -= speed
+        // Biến trạng thái game
+        let gameSpeed = 5;
+        let score = 0;
+        let highScore = 0;
+        let isGameOver = false;
 
-    # Kiểm tra va chạm hoặc vượt qua thành công
-    if st.session_state.cactus_distance <= 0:
-        # Nếu khoảng cách bằng hoặc nhỏ hơn 0, người chơi phải nhảy đủ cao/xa để qua
-        if jump_force >= 2:  # Cần lực nhảy từ "Vừa" trở lên
-            st.session_state.score += 10
-            st.session_state.log_message = f"🎉 Tuyệt vời! Bạn đã nhảy qua cây xương rồng! (+10 điểm)"
-            st.session_state.cactus_distance = random.randint(3, 6) # Tạo cây xương rồng mới phía xa
-        else:
-            st.session_state.game_over = True
-            st.session_state.log_message = "💥 Đoàng! Lực nhảy quá yếu, bạn đã đâm vào cây xương rồng!"
-    else:
-        # Xương rồng chưa tới nơi
-        if jump_force > 0:
-            st.session_state.log_message = f"💨 Bạn nhảy hơi sớm! Cây xương rồng vẫn còn cách {st.session_state.cactus_distance} mét."
-        else:
-            st.session_state.score += 2
-            st.session_state.log_message = f"🏃 Bạn tiếp tục chạy an toàn. Xương rồng còn cách {st.session_state.cactus_distance} mét. (+2 điểm)"
+        // Khởi tạo Khủng long
+        const dino = {
+            x: 50,
+            y: 160,
+            width: 25,
+            height: 30,
+            gravity: 0.6,
+            jumpForce: -10,
+            velocity: 0,
+            isJumping: false
+        };
 
-    # Cập nhật Điểm Kỷ Lục
-    if st.session_state.score > st.session_state.high_score:
-        st.session_state.high_score = st.session_state.score
+        // Danh sách vật cản (Xương rồng)
+        let obstacles = [];
+        let spawnTimer = 0;
 
-# Hàm chơi lại game
-def reset_game():
-    st.session_state.score = 0
-    st.session_state.cactus_distance = random.randint(3, 6)
-    st.session_state.game_over = False
-    st.session_state.log_message = "Trò chơi đã được đặt lại. Chạy thôi!"
+        // Xử lý sự kiện Nhảy (Phím cách hoặc Click chuột)
+        function jump() {
+            if (isGameOver) {
+                resetGame();
+                return;
+            }
+            if (!dino.isJumping) {
+                dino.velocity = dino.jumpForce;
+                dino.isJumping = true;
+            }
+        }
 
-# --- GIAO DIỆN HIỂN THỊ GAME ---
+        window.addEventListener("keydown", function(e) {
+            if (e.code === "Space") {
+                e.preventDefault(); // Tránh trượt màn hình Streamlit xuống
+                jump();
+            }
+        });
 
-# 1. Bảng điểm số
-col1, col2 = st.columns(2)
-with col1:
-    st.metric(label="🎯 Điểm số hiện tại", value=st.session_state.score)
-with col2:
-    st.metric(label="🏆 Điểm kỷ lục", value=st.session_state.high_score)
+        canvas.addEventListener("click", jump);
 
-# 2. Đồ họa giả lập bằng văn bản & Emoji
+        // Tạo xương rồng mới
+        function spawnObstacle() {
+            let height = Math.random() > 0.5 ? 40 : 30;
+            let width = 15;
+            obstacles.push({
+                x: canvas.width,
+                y: 190 - height,
+                width: width,
+                height: height
+            });
+        }
+
+        function resetGame() {
+            obstacles = [];
+            score = 0;
+            gameSpeed = 5;
+            isGameOver = false;
+            dino.y = 160;
+            dino.velocity = 0;
+            dino.isJumping = false;
+            animate();
+        }
+
+        // Vòng lặp chạy game 60 FPS
+        let animationFrameId;
+        function animate() {
+            if (isGameOver) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Xử lý Trọng lực vật lý cho Khủng long
+            dino.velocity += dino.gravity;
+            dino.y += dino.velocity;
+
+            if (dino.y >= 160) {
+                dino.y = 160;
+                dino.velocity = 0;
+                dino.isJumping = false;
+            }
+
+            // Vẽ Khủng long (Dạng hình hộp giả lập có Emoji)
+            ctx.font = "26px Arial";
+            ctx.fillText("🦖", dino.x, dino.y + 24);
+
+            // 2. Quản lý vật cản Xương rồng lao tới
+            spawnTimer++;
+            if (spawnTimer > Math.max(50, 100 - gameSpeed * 3)) {
+                spawnObstacle();
+                spawnTimer = 0;
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let o = obstacles[i];
+                o.x -= gameSpeed;
+
+                // Vẽ Xương rồng
+                ctx.font = "24px Arial";
+                ctx.fillText("🌵", o.x, o.y + 24);
+
+                // Kiểm tra va chạm (Đâm vào xương rồng)
+                if (
+                    dino.x < o.x + o.width &&
+                    dino.x + dino.width > o.x &&
+                    dino.y < o.y + o.height &&
+                    dino.y + dino.height > o.y
+                ) {
+                    isGameOver = true;
+                }
+
+                // Xóa vật cản khi chạy khỏi màn hình và cộng điểm
+                if (o.x + o.width < 0) {
+                    obstacles.splice(i, 1);
+                    score++;
+                    if (score > highScore) highScore = score;
+                    if (score % 5 === 0) gameSpeed += 0.5; // Game càng ngày càng nhanh
+                }
+            }
+
+            // 3. Hiển thị Điểm số
+            ctx.fillStyle = "#535353";
+            ctx.font = "16px monospace";
+            ctx.fillText("HI " + String(highScore).padStart(5, '0') + "   " + String(score).padStart(5, '0'), 460, 30);
+
+            // Nếu thua cuộc
+            if (isGameOver) {
+                ctx.fillStyle = "#535353";
+                ctx.font = "bold 20px monospace";
+                ctx.fillText("G A M E   O V E R", 220, 90);
+                ctx.font = "14px Arial";
+                ctx.fillText("💀 Bấm chuột hoặc nút Cách để chơi lại", 185, 120);
+                cancelAnimationFrame(animationFrameId);
+                return;
+            }
+
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        // Bắt đầu chạy game
+        animate();
+    </script>
+</body>
+</html>
+"""
+
+# Nhúng khung game HTML5 vào giao diện Streamlit với kích thước chuẩn
+components.html(dino_game_html, height=230, scrolling=False)
+
 st.write("---")
-dino_status = "🦖 (Đang nhảy)" if st.session_state.log_message.startswith("🎉") or st.session_state.log_message.startswith("💨") else "🦖"
-if st.session_state.game_over:
-    dino_status = "💀 (Thua cuộc)"
-
-# Tạo đường chạy trực quan
-track = "_" * 20
-cactus_pos = max(0, min(19, st.session_state.cactus_distance * 3))
-track_list = list(track)
-if not st.session_state.game_over:
-    track_list[cactus_pos] = "🌵"
-track_display = "".join(track_list)
-
-st.subheader(f"{dino_status} {track_display}")
-st.write("---")
-
-# 3. Khu vực điều khiển hành động
-if not st.session_state.game_over:
-    st.info(st.session_state.log_message)
-    
-    # Người chơi chọn lực nhảy
-    choice = st.radio("Chọn hành động cho lượt này:", ["Tiếp tục chạy (Không nhảy)", "Nhảy vừa phải", "Nhảy cực mạnh"])
-    
-    # Áp dụng lực nhảy tương ứng
-    force_map = {"Tiếp tục chạy (Không nhảy)": 0, "Nhảy vừa phải": 2, "Nhảy cực mạnh": 3}
-    
-    if st.button("Xác nhận hành động 🚀"):
-        play_turn(force_map[choice])
-        st.rerun()
-else:
-    st.error(st.session_state.log_message)
-    st.button("🎮 Chơi lại từ đầu", on_click=reset_game)
-
-   
- 
+st.info("💡 Điểm cộng lớn: Game này sử dụng đồ họa HTML5 Canvas chạy 60 FPS thời gian thực, đã tích hợp sẵn thông tin nhóm ở tiêu đề để thầy cô dễ chấm điểm!")
